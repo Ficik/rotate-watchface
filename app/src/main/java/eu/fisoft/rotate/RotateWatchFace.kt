@@ -255,33 +255,31 @@ class RotateWatchFace : CanvasWatchFaceService() {
             // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
             val now = System.currentTimeMillis()
             mCalendar.timeInMillis = now
+            if (!mAmbient) {
+                // outer ring
+                canvas.drawCircle(
+                        mSurfaceCenter,
+                        mSurfaceCenter,
+                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth / 2,
+                        Paint().apply {
+                            color = Color.BLACK
+                            style = Paint.Style.STROKE
+                            strokeWidth = mOuterRingWidth
+                        }
+                )
 
-            // outer ring
-            canvas.drawCircle(
-                    mSurfaceCenter,
-                    mSurfaceCenter,
-                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth / 2,
-                    Paint().apply {
-                        color = Color.BLACK
-                        style = Paint.Style.STROKE
-                        strokeWidth = mOuterRingWidth
-                    }
-            )
-
-            // inner ring
-            canvas.drawCircle(
-                    mSurfaceCenter,
-                    mSurfaceCenter,
-                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth / 2,
-                    Paint().apply {
-                        color = Color.DKGRAY
-                        style = Paint.Style.STROKE
-                        strokeWidth = mInnerRingWidth
-                    }
-            )
-
-
-
+                // inner ring
+                canvas.drawCircle(
+                        mSurfaceCenter,
+                        mSurfaceCenter,
+                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth / 2,
+                        Paint().apply {
+                            color = Color.DKGRAY
+                            style = Paint.Style.STROKE
+                            strokeWidth = mInnerRingWidth
+                        }
+                )
+            }
 
 
             val hour = mCalendar.get(Calendar.HOUR_OF_DAY)
@@ -289,55 +287,73 @@ class RotateWatchFace : CanvasWatchFaceService() {
             val second = mCalendar.get(Calendar.SECOND)
             val minuteFloat = minute + (second/60F)
 
-            canvas.rotate((minute/60F) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+
+            canvas.rotate((minute / 60F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
             for (i in 1..12) {
                 drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
-                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
+                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
             }
-            canvas.rotate((1-(minute/60F)) * -360F/12, mSurfaceCenter, mSurfaceCenter)
-            canvas.rotate(360F/12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate((1 - (minute / 60F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
 
 
             val startMinute = (minute / 5) * 5
-            canvas.rotate(((minuteFloat % 5F)/5F) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(((minuteFloat % 5F) / 5F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
             for (i in 0..11) {
                 drawMinute(canvas, ((startMinute - (i * 5)) + 60) % 60, mInnerRingTextPaint)
-                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
+                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
             }
-            canvas.rotate((1-((minuteFloat % 5F)/5F)) * -360F/12, mSurfaceCenter, mSurfaceCenter)
-            canvas.rotate(360F/12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate((1 - ((minuteFloat % 5F) / 5F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
 
 
             val highlightColor = Color.parseColor("#B0FF740D")
 
+            if (!mAmbient) {
 
-            // window
-            canvas.drawArc(
-                    0F,
-                    0F,
-                    mSurfaceWidth,
-                    mSurfaceWidth,
-                    165F, 30F,
-                    false,
-                    Paint().apply {
-                        color = highlightColor
-                        style = Paint.Style.STROKE
-                        strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
-                        setShadowLayer(4F, 0F, 0F, Color.BLACK)
-                    }
-            )
+                // window
+                canvas.drawArc(
+                        0F,
+                        0F,
+                        mSurfaceWidth,
+                        mSurfaceWidth,
+                        165F, 30F,
+                        false,
+                        Paint().apply {
+                            color = highlightColor
+                            style = Paint.Style.STROKE
+                            strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
+                            setShadowLayer(4F, 0F, 0F, Color.BLACK)
+                        }
+                )
 
 
-            // center
-            canvas.drawCircle(
-                    mSurfaceCenter,
-                    mSurfaceCenter,
-                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth,
-                    Paint().apply {
-                        color = Color.BLACK
-                        style = Paint.Style.FILL
-                    }
-            )
+                // center
+                canvas.drawCircle(
+                        mSurfaceCenter,
+                        mSurfaceCenter,
+                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth,
+                        Paint().apply {
+                            color = Color.BLACK
+                            style = Paint.Style.FILL
+                        }
+                )
+            } else {
+                // window
+                canvas.drawArc(
+                        0F,
+                        0F,
+                        mSurfaceWidth,
+                        mSurfaceWidth,
+                        165F, 30F,
+                        false,
+                        Paint().apply {
+                            color = Color.DKGRAY
+                            style = Paint.Style.STROKE
+                            strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
+                        }
+                )
+            }
 
             drawHour(canvas, hour, mOuterRingHighlightTextPaint)
             drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
