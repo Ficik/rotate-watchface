@@ -92,6 +92,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
         private var mSurfaceWidth = 0F
         private var mSurfaceCenter = 0F
         private var mSurfaceHeight = 0F
+        private var mFont = NORMAL_TYPEFACE
+        private var mFontHighlight = NORMAL_TYPEFACE
 
 
         private var mOuterRingTextPaint: Paint = Paint()
@@ -121,12 +123,14 @@ class RotateWatchFace : CanvasWatchFaceService() {
             mSurfaceWidth = width.toFloat()
             mSurfaceHeight = height.toFloat()
             mSurfaceCenter = width.toFloat() / 2F
-            mOuterRingWidth = mSurfaceWidth / 6F
-            mInnerRingWidth = mSurfaceWidth / 6F
+            mOuterRingWidth = mSurfaceWidth / 7F
+            mInnerRingWidth = mSurfaceWidth / 7F
             mPaddingRingWidth = mSurfaceWidth / 48F
 
+
+
             mOuterRingHighlightTextPaint = Paint().apply {
-                typeface = NORMAL_TYPEFACE
+                typeface = mFontHighlight
                 textSize = mOuterRingWidth * 0.75F
                 isAntiAlias = true
                 color = Color.WHITE
@@ -134,15 +138,15 @@ class RotateWatchFace : CanvasWatchFaceService() {
             }
 
             mOuterRingTextPaint = Paint().apply {
-                typeface = NORMAL_TYPEFACE
-                textSize = mOuterRingWidth * 0.65F
+                typeface = mFont
+                textSize = mOuterRingWidth * 0.55F
                 isAntiAlias = true
                 color = Color.GRAY
                 textAlign = Paint.Align.CENTER
             }
 
             mInnerRingHighlightTextPaint = Paint().apply {
-                typeface = NORMAL_TYPEFACE
+                typeface = mFontHighlight
                 textSize = mOuterRingWidth * 0.45F
                 isAntiAlias = true
                 color = Color.WHITE
@@ -150,7 +154,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
             }
 
             mInnerRingTextPaint = Paint().apply {
-                typeface = NORMAL_TYPEFACE
+                typeface = mFont
                 textSize = mOuterRingWidth * 0.35F
                 isAntiAlias = true
                 color = Color.GRAY
@@ -166,6 +170,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
                     .build())
 
             mCalendar = Calendar.getInstance()
+            mFontHighlight = resources.getFont(R.font.oswald_medium)
+            mFont = resources.getFont(R.font.oswald_regular)
 
             val resources = this@RotateWatchFace.resources
             mYOffset = resources.getDimension(R.dimen.digital_y_offset)
@@ -275,8 +281,37 @@ class RotateWatchFace : CanvasWatchFaceService() {
             )
 
 
+
+
+
+            val hour = mCalendar.get(Calendar.HOUR_OF_DAY)
+            val minute = mCalendar.get(Calendar.MINUTE)
+            val second = mCalendar.get(Calendar.SECOND)
+            val minuteFloat = minute + (second/60F)
+
+            canvas.rotate((minute/60F) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+            for (i in 1..12) {
+                drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
+                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
+            }
+            canvas.rotate((1-(minute/60F)) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F/12, mSurfaceCenter, mSurfaceCenter)
+
+
+            val startMinute = (minute / 5) * 5
+            canvas.rotate(((minuteFloat % 5F)/5F) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+            for (i in 0..11) {
+                drawMinute(canvas, ((startMinute - (i * 5)) + 60) % 60, mInnerRingTextPaint)
+                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
+            }
+            canvas.rotate((1-((minuteFloat % 5F)/5F)) * -360F/12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F/12, mSurfaceCenter, mSurfaceCenter)
+
+
             val highlightColor = Color.parseColor("#B0FF740D")
 
+
+            // window
             canvas.drawArc(
                     0F,
                     0F,
@@ -288,8 +323,10 @@ class RotateWatchFace : CanvasWatchFaceService() {
                         color = highlightColor
                         style = Paint.Style.STROKE
                         strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
+                        setShadowLayer(4F, 0F, 0F, Color.BLACK)
                     }
             )
+
 
             // center
             canvas.drawCircle(
@@ -302,26 +339,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
                     }
             )
 
-
-            val hour = mCalendar.get(Calendar.HOUR_OF_DAY)
-            val minute = mCalendar.get(Calendar.MINUTE)
             drawHour(canvas, hour, mOuterRingHighlightTextPaint)
             drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
-
-
-            for (i in 1..11) {
-                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
-                drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
-            }
-            canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
-
-
-            val startMinute = (minute / 5) * 5
-            for (i in 1..11) {
-                canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
-                drawMinute(canvas, ((startMinute - i) * 5 + 60) % 60, mInnerRingTextPaint)
-            }
-            canvas.rotate(-360F/12, mSurfaceCenter, mSurfaceCenter)
 
             // canvas.drawText(text, mXOffset, mYOffset, mTextPaint)
         }
