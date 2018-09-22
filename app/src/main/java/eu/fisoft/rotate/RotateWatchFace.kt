@@ -94,6 +94,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
         private var mSurfaceHeight = 0F
         private var mFont = NORMAL_TYPEFACE
         private var mFontHighlight = NORMAL_TYPEFACE
+        private var mHighlightColor = Color.parseColor("#B0FF740D")
 
 
         private var mOuterRingTextPaint: Paint = Paint()
@@ -248,69 +249,31 @@ class RotateWatchFace : CanvasWatchFaceService() {
             if (mAmbient) {
                 canvas.drawColor(Color.BLACK)
             } else {
-                canvas.drawRect(
-                        0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(), mBackgroundPaint)
+                canvas.drawColor(Color.DKGRAY)
             }
 
-            // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
+            if (!mAmbient) {
+                drawRings(canvas)
+            }
+
             val now = System.currentTimeMillis()
             mCalendar.timeInMillis = now
-            if (!mAmbient) {
-                // outer ring
-                canvas.drawCircle(
-                        mSurfaceCenter,
-                        mSurfaceCenter,
-                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth / 2,
-                        Paint().apply {
-                            color = Color.BLACK
-                            style = Paint.Style.STROKE
-                            strokeWidth = mOuterRingWidth
-                        }
-                )
-
-                // inner ring
-                canvas.drawCircle(
-                        mSurfaceCenter,
-                        mSurfaceCenter,
-                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth / 2,
-                        Paint().apply {
-                            color = Color.DKGRAY
-                            style = Paint.Style.STROKE
-                            strokeWidth = mInnerRingWidth
-                        }
-                )
-            }
-
-
             val hour = mCalendar.get(Calendar.HOUR_OF_DAY)
             val minute = mCalendar.get(Calendar.MINUTE)
             val second = mCalendar.get(Calendar.SECOND)
             val minuteFloat = minute + (second/60F)
 
+            drawNumbers(canvas, hour, minuteFloat)
+            drawWindow(canvas)
 
-            canvas.rotate((minute / 60F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            for (i in 1..12) {
-                drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
-                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
-            }
-            canvas.rotate((1 - (minute / 60F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
+            drawHour(canvas, hour, mOuterRingHighlightTextPaint)
+            drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
 
+            // canvas.drawText(text, mXOffset, mYOffset, mTextPaint)
+        }
 
-            val startMinute = (minute / 5) * 5
-            canvas.rotate(((minuteFloat % 5F) / 5F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            for (i in 0..11) {
-                drawMinute(canvas, ((startMinute - (i * 5)) + 60) % 60, mInnerRingTextPaint)
-                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
-            }
-            canvas.rotate((1 - ((minuteFloat % 5F) / 5F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
-
-
-            val highlightColor = Color.parseColor("#B0FF740D")
-
+        fun drawWindow(canvas: Canvas) {
             if (!mAmbient) {
-
                 // window
                 canvas.drawArc(
                         0F,
@@ -320,7 +283,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
                         165F, 30F,
                         false,
                         Paint().apply {
-                            color = highlightColor
+                            color = mHighlightColor
                             style = Paint.Style.STROKE
                             strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
                             setShadowLayer(4F, 0F, 0F, Color.BLACK)
@@ -354,11 +317,54 @@ class RotateWatchFace : CanvasWatchFaceService() {
                         }
                 )
             }
+        }
 
-            drawHour(canvas, hour, mOuterRingHighlightTextPaint)
-            drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
+        fun drawRings(canvas: Canvas) {
+            // outer ring
+            canvas.drawCircle(
+                    mSurfaceCenter,
+                    mSurfaceCenter,
+                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth / 2,
+                    Paint().apply {
+                        color = Color.BLACK
+                        style = Paint.Style.STROKE
+                        strokeWidth = mOuterRingWidth
+                    }
+            )
 
-            // canvas.drawText(text, mXOffset, mYOffset, mTextPaint)
+            // inner ring
+            canvas.drawCircle(
+                    mSurfaceCenter,
+                    mSurfaceCenter,
+                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth / 2,
+                    Paint().apply {
+                        color = Color.DKGRAY
+                        style = Paint.Style.STROKE
+                        strokeWidth = mInnerRingWidth
+                    }
+            )
+        }
+
+        fun drawNumbers(canvas: Canvas, hour: Int, minutef: Float) {
+            val minute = minutef.toInt()
+
+            canvas.rotate((minute / 60F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            for (i in 1..12) {
+                drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
+                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
+            }
+            canvas.rotate((1 - (minute / 60F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
+
+
+            val startMinute = (minute / 5) * 5
+            canvas.rotate(((minutef % 5F) / 5F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            for (i in 0..11) {
+                drawMinute(canvas, ((startMinute - (i * 5)) + 60) % 60, mInnerRingTextPaint)
+                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
+            }
+            canvas.rotate((1 - ((minutef % 5F) / 5F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
         }
 
 
