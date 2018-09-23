@@ -69,6 +69,38 @@
                         android:textAlignment="center" />
 
                 </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/left_bite_complication_option"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Left bite"
+                        android:textAlignment="center" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/right_bite_complication_option"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Right bite"
+                        android:textAlignment="center" />
+
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>

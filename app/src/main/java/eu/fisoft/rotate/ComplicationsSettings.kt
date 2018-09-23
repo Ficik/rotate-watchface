@@ -60,6 +60,33 @@ class ComplicationsSettings : WearableActivity() {
                     COMPLICATION_CONFIG_REQUEST_CODE
             )
         })
+
+        findViewById<View>(R.id.left_bite_complication_option).setOnClickListener(View.OnClickListener {
+            startActivityForResult(
+                    ComplicationHelperActivity.createProviderChooserHelperIntent(
+                            applicationContext,
+                            mWatchFaceComponentName,
+                            COMPLICATION_BITE_LEFT,
+                            ComplicationData.TYPE_SHORT_TEXT,
+                            ComplicationData.TYPE_ICON,
+                            ComplicationData.TYPE_SMALL_IMAGE
+                    ),
+                    COMPLICATION_CONFIG_REQUEST_CODE
+            )
+        })
+
+        findViewById<View>(R.id.right_bite_complication_option).setOnClickListener(View.OnClickListener {
+            startActivityForResult(
+                    ComplicationHelperActivity.createProviderChooserHelperIntent(
+                            applicationContext,
+                            mWatchFaceComponentName,
+                            COMPLICATION_BITE_RIGHT,
+                            ComplicationData.TYPE_SHORT_TEXT,
+                            ComplicationData.TYPE_ICON
+                    ),
+                    COMPLICATION_CONFIG_REQUEST_CODE
+            )
+        })
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

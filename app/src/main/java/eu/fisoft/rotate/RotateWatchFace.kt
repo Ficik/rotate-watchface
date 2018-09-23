@@ -32,6 +32,8 @@ import java.util.TimeZone
 const val COMPLICATION_CENTER_FIRST_LINE = 10
 const val COMPLICATION_CENTER_SECOND_LINE = 11
 const val COMPLICATION_BORDER_CIRCLE = 12
+const val COMPLICATION_BITE_LEFT = 13
+const val COMPLICATION_BITE_RIGHT = 14
 
 /**
  * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
@@ -54,7 +56,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
          * Updates rate in milliseconds for interactive mode. We update once a second since seconds
          * are displayed in interactive mode.
          */
-        private const val INTERACTIVE_UPDATE_RATE_MS = 1000
+        private const val INTERACTIVE_UPDATE_RATE_MS = 10000
 
         /**
          * Handler message id for updating the time periodically in interactive mode.
@@ -98,6 +100,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
         private var mComplicationDataCenterFirstLine: ComplicationData? = null
         private var mComplicationDataCenterSecondLine: ComplicationData? = null
         private var mComplicationDataBorderCircle: ComplicationData? = null
+        private var mComplicationDataBiteLeft: ComplicationData? = null
+        private var mComplicationDataBiteRight: ComplicationData? = null
 
 
 
@@ -118,6 +122,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
         private var mInnerRingHighlightTextPaint: Paint = Paint()
         private var mCenterTextPaint = Paint()
         private var mPaddingRingPaint = Paint()
+        private var mBiteTextPaint = Paint()
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -144,23 +149,23 @@ class RotateWatchFace : CanvasWatchFaceService() {
             mSurfaceHeight = height.toFloat()
             mSurfaceCenter = width.toFloat() / 2F
             mOuterRingWidth = mSurfaceWidth / 7F
-            mInnerRingWidth = mSurfaceWidth / 7F
-            mPaddingRingWidth = mSurfaceWidth / 48F
+            mInnerRingWidth = mSurfaceWidth / 8F
+            mPaddingRingWidth = mSurfaceWidth / 64F
 
 
 
             mOuterRingHighlightTextPaint = Paint().apply {
                 typeface = mFontHighlight
                 textSize = mOuterRingWidth * 0.75F
-                isAntiAlias = true
+                isAntiAlias = !mLowBitAmbient
                 color = Color.WHITE
                 textAlign = Paint.Align.CENTER
             }
 
             mOuterRingTextPaint = Paint().apply {
-                typeface = mFont
+                typeface = mFontHighlight
                 textSize = mOuterRingWidth * 0.55F
-                isAntiAlias = true
+                isAntiAlias = !mLowBitAmbient
                 color = Color.GRAY
                 textAlign = Paint.Align.CENTER
             }
@@ -168,7 +173,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
             mInnerRingHighlightTextPaint = Paint().apply {
                 typeface = mFontHighlight
                 textSize = mOuterRingWidth * 0.45F
-                isAntiAlias = true
+                isAntiAlias = !mLowBitAmbient
                 color = Color.WHITE
                 textAlign = Paint.Align.CENTER
             }
@@ -176,26 +181,35 @@ class RotateWatchFace : CanvasWatchFaceService() {
             mInnerRingTextPaint = Paint().apply {
                 typeface = mFont
                 textSize = mOuterRingWidth * 0.35F
-                isAntiAlias = true
+                isAntiAlias = !mLowBitAmbient
                 color = Color.GRAY
                 textAlign = Paint.Align.CENTER
             }
 
             mCenterTextPaint = Paint().apply {
                 typeface = mFont
-                textSize = mSurfaceWidth * 0.05F
-                isAntiAlias = true
+                textSize = mSurfaceWidth * 0.055F
+                isAntiAlias = !mLowBitAmbient
                 color = Color.WHITE
                 textAlign = Paint.Align.CENTER
             }
 
             mPaddingRingPaint = Paint().apply {
                 color = Color.DKGRAY // ColorUtils.setAlphaComponent(mHighlightColor, (255 * 0.25).toInt())
-                isAntiAlias = true
+                isAntiAlias = !mLowBitAmbient
                 style = Paint.Style.STROKE
                 strokeWidth = mPaddingRingWidth * 2
+            }
+
+            mBiteTextPaint = Paint().apply {
+                typeface = mFontHighlight
+                textSize = mOuterRingWidth * 0.40F
+                textAlign = Paint.Align.CENTER
+                color = Color.WHITE
+                isAntiAlias = !mLowBitAmbient
 
             }
+
         }
 
         override fun onCreate(holder: SurfaceHolder) {
@@ -203,7 +217,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
             setWatchFaceStyle(WatchFaceStyle.Builder(this@RotateWatchFace)
                     .setAcceptsTapEvents(true)
-                    .setStatusBarGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+                    .setStatusBarGravity(Gravity.CENTER or Gravity.CENTER_HORIZONTAL)
                     .build())
 
             mCalendar = Calendar.getInstance()
@@ -245,10 +259,24 @@ class RotateWatchFace : CanvasWatchFaceService() {
                     ComplicationData.TYPE_RANGED_VALUE
             )
 
+            setDefaultSystemComplicationProvider(
+                    COMPLICATION_BITE_LEFT,
+                    SystemProviders.STEP_COUNT,
+                    ComplicationData.TYPE_SHORT_TEXT
+            )
+
+            setDefaultSystemComplicationProvider(
+                    COMPLICATION_BITE_RIGHT,
+                    SystemProviders.SUNRISE_SUNSET,
+                    ComplicationData.TYPE_SHORT_TEXT
+            )
+
             setActiveComplications(
                     COMPLICATION_CENTER_FIRST_LINE,
                     COMPLICATION_CENTER_SECOND_LINE,
-                    COMPLICATION_BORDER_CIRCLE
+                    COMPLICATION_BORDER_CIRCLE,
+                    COMPLICATION_BITE_LEFT,
+                    COMPLICATION_BITE_RIGHT
             )
         }
 
@@ -307,12 +335,12 @@ class RotateWatchFace : CanvasWatchFaceService() {
         override fun onComplicationDataUpdate(watchFaceComplicationId: Int, data: ComplicationData?) {
             super.onComplicationDataUpdate(watchFaceComplicationId, data)
             if (data != null) {
-                if (watchFaceComplicationId == COMPLICATION_CENTER_FIRST_LINE) {
-                    mComplicationDataCenterFirstLine = data
-                } else if (watchFaceComplicationId == COMPLICATION_CENTER_SECOND_LINE) {
-                    mComplicationDataCenterSecondLine = data
-                } else if (watchFaceComplicationId == COMPLICATION_BORDER_CIRCLE) {
-                    mComplicationDataBorderCircle = data
+                when (watchFaceComplicationId) {
+                    COMPLICATION_CENTER_FIRST_LINE -> mComplicationDataCenterFirstLine = data
+                    COMPLICATION_CENTER_SECOND_LINE -> mComplicationDataCenterSecondLine = data
+                    COMPLICATION_BORDER_CIRCLE -> mComplicationDataBorderCircle = data
+                    COMPLICATION_BITE_LEFT -> mComplicationDataBiteLeft = data
+                    COMPLICATION_BITE_RIGHT -> mComplicationDataBiteRight = data
                 }
             }
 
@@ -345,6 +373,10 @@ class RotateWatchFace : CanvasWatchFaceService() {
             drawNumbers(canvas, hour, minuteFloat)
             drawWindow(canvas)
 
+            drawBite(canvas, 320F, mComplicationDataBiteRight?.shortText?.getText(applicationContext, now)?.toString() ?: "")
+            drawBite(canvas, 220F, mComplicationDataBiteLeft?.shortText?.getText(applicationContext, now)?.toString() ?: "")
+
+
             drawHour(canvas, hour, mOuterRingHighlightTextPaint)
             drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
 
@@ -353,18 +385,20 @@ class RotateWatchFace : CanvasWatchFaceService() {
             val secondLine = mComplicationDataCenterSecondLine?.shortText?.getText(applicationContext, now)?.toString() ?:
             mComplicationDataCenterSecondLine?.longText?.getText(applicationContext, now)?.toString() ?: ""
 
+            val shouldOffsetText = firstLine.isNotEmpty() && secondLine.isNotEmpty()
+
             mCenterTextPaint.getTextBounds(firstLine, 0, firstLine.length, mTextBounds)
             canvas.drawText(
                     firstLine,
                     mSurfaceCenter,
-                    mSurfaceCenter - mSurfaceHeight/24F - mTextBounds.exactCenterY() - mTextBounds.height(),
+                    mSurfaceCenter - mTextBounds.exactCenterY() - (if (shouldOffsetText) mTextBounds.height()*(5F/8) else 0F),
                     mCenterTextPaint
             )
 
             mCenterTextPaint.getTextBounds(secondLine, 0, secondLine.length, mTextBounds)
             canvas.drawText(secondLine,
                     mSurfaceCenter,
-                    mSurfaceCenter + mSurfaceHeight/24F - mTextBounds.exactCenterY() + mTextBounds.height(),
+                    mSurfaceCenter - mTextBounds.exactCenterY() + (if (shouldOffsetText) mTextBounds.height()*(5F/8) else 0F),
                     mCenterTextPaint
             )
 
@@ -372,6 +406,41 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
 
             // canvas.drawText(text, mXOffset, mYOffset, mTextPaint)
+        }
+
+        fun drawBite(canvas: Canvas, angle: Float, value: String) {
+            if (value.isEmpty()) return
+            val bgColor = if (mAmbient) {
+                Color.DKGRAY
+            } else {
+                ColorUtils.setAlphaComponent(mHighlightColor, (0.65F * 255).toInt())
+            }
+
+            canvas.drawArc(
+                    0F,
+                    0F,
+                    mSurfaceWidth,
+                    mSurfaceWidth,
+                    angle - 15F, 30F,
+                    false,
+                    Paint().apply {
+                        color = bgColor
+                        isAntiAlias = !mLowBitAmbient
+                        style = Paint.Style.STROKE
+                        strokeWidth = (mPaddingRingWidth * 2 + mOuterRingWidth) * 2
+                        setShadowLayer(4F, 0F, 0F, Color.BLACK)
+                    }
+            )
+
+            canvas.rotate(-(270F - angle), mSurfaceCenter, mSurfaceCenter)
+            mBiteTextPaint.getTextBounds(value, 0, value.length, mTextBounds)
+            canvas.drawText(
+                    value,
+                    mSurfaceCenter,
+                    mPaddingRingWidth + mOuterRingWidth/2 - mTextBounds.exactCenterY(),
+                    mBiteTextPaint
+            )
+            canvas.rotate(270F - angle, mSurfaceCenter, mSurfaceCenter)
         }
 
         fun drawPaddingRing(canvas:Canvas, percent:Float) {
@@ -385,50 +454,42 @@ class RotateWatchFace : CanvasWatchFaceService() {
         }
 
         fun drawWindow(canvas: Canvas) {
-            if (!mAmbient) {
-                // window
-                canvas.drawArc(
-                        0F,
-                        0F,
-                        mSurfaceWidth,
-                        mSurfaceWidth,
-                        255F, 30F,
-                        false,
-                        Paint().apply {
-                            color = mHighlightColor
-                            style = Paint.Style.STROKE
-                            strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
-                            setShadowLayer(4F, 0F, 0F, Color.BLACK)
-                        }
-                )
-
-
-                // center
-                canvas.drawCircle(
-                        mSurfaceCenter,
-                        mSurfaceCenter,
-                        mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth,
-                        Paint().apply {
-                            color = Color.BLACK
-                            style = Paint.Style.FILL
-                        }
-                )
+            val bgColor = if (mAmbient) {
+                Color.DKGRAY
             } else {
-                // window
-                canvas.drawArc(
-                        0F,
-                        0F,
-                        mSurfaceWidth,
-                        mSurfaceWidth,
-                        165F, 30F,
-                        false,
-                        Paint().apply {
-                            color = Color.DKGRAY
-                            style = Paint.Style.STROKE
-                            strokeWidth = (mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth) * 2
-                        }
-                )
+                mHighlightColor
             }
+
+
+            // center
+            canvas.drawCircle(
+                    mSurfaceCenter,
+                    mSurfaceCenter,
+                    mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth,
+                    Paint().apply {
+                        isAntiAlias = !mLowBitAmbient
+                        color = Color.BLACK
+                        style = Paint.Style.FILL
+                    }
+            )
+                // window
+            canvas.drawArc(
+                    0F,
+                    0F,
+                    mSurfaceWidth,
+                    mSurfaceWidth,
+                    255F, 30F,
+                    false,
+                    Paint().apply {
+                        color = bgColor
+                        isAntiAlias = !mLowBitAmbient
+                        style = Paint.Style.STROKE
+                        strokeWidth = (mPaddingRingWidth * 2 + mOuterRingWidth + mInnerRingWidth) * 2
+                        setShadowLayer(4F, 0F, 0F, Color.BLACK)
+                    }
+            )
+
+
         }
 
         fun drawRings(canvas: Canvas) {
@@ -438,6 +499,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
                     mSurfaceCenter,
                     mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth / 2,
                     Paint().apply {
+                        isAntiAlias = !mLowBitAmbient
                         color = Color.BLACK
                         style = Paint.Style.STROKE
                         strokeWidth = mOuterRingWidth
@@ -451,6 +513,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
                     mSurfaceCenter - mPaddingRingWidth - mOuterRingWidth - mInnerRingWidth / 2,
                     Paint().apply {
                         color = Color.DKGRAY
+                        isAntiAlias = !mLowBitAmbient
                         style = Paint.Style.STROKE
                         strokeWidth = mInnerRingWidth
                     }
@@ -460,13 +523,13 @@ class RotateWatchFace : CanvasWatchFaceService() {
         fun drawNumbers(canvas: Canvas, hour: Int, minutef: Float) {
             val minute = minutef.toInt()
 
-            canvas.rotate((minute / 60F) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            for (i in 1..12) {
+            canvas.rotate((minute / 60F) * -360F / 16, mSurfaceCenter, mSurfaceCenter)
+            for (i in 1..16) {
                 drawHour(canvas, (hour - i + 24) % 24, mOuterRingTextPaint)
-                canvas.rotate(-360F / 12, mSurfaceCenter, mSurfaceCenter)
+                canvas.rotate(-360F / 16, mSurfaceCenter, mSurfaceCenter)
             }
-            canvas.rotate((1 - (minute / 60F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
-            canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate((1 - (minute / 60F)) * -360F / 16, mSurfaceCenter, mSurfaceCenter)
+            canvas.rotate(360F / 16, mSurfaceCenter, mSurfaceCenter)
 
 
             val startMinute = (minute / 5) * 5
@@ -478,7 +541,6 @@ class RotateWatchFace : CanvasWatchFaceService() {
             canvas.rotate((1 - ((minutef % 5F) / 5F)) * -360F / 12, mSurfaceCenter, mSurfaceCenter)
             canvas.rotate(360F / 12, mSurfaceCenter, mSurfaceCenter)
         }
-
 
         fun drawHour(canvas: Canvas, hour: Int, paint: Paint) {
             val hours = String.format("%s", hour)
