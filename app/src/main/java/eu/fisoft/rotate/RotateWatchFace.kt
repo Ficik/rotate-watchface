@@ -20,6 +20,7 @@ import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.text.TextPaint
+import android.view.Gravity
 import android.view.SurfaceHolder
 import android.view.WindowInsets
 import android.widget.Toast
@@ -27,6 +28,10 @@ import android.widget.Toast
 import java.lang.ref.WeakReference
 import java.util.Calendar
 import java.util.TimeZone
+
+const val COMPLICATION_CENTER_FIRST_LINE = 10
+const val COMPLICATION_CENTER_SECOND_LINE = 11
+const val COMPLICATION_BORDER_CIRCLE = 12
 
 /**
  * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
@@ -56,8 +61,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
          */
         private const val MSG_UPDATE_TIME = 0
 
-        private const val CENTER_COMPLICATION = 7
-        private const val PADDING_CICLE_COMPLICATION = 2
+
     }
 
     override fun onCreateEngine(): Engine {
@@ -91,8 +95,10 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
         private var mTextBounds = Rect()
 
-        private var mComplicationDataCenter: ComplicationData? = null
-        private var mComplicationDataPadding: ComplicationData? = null
+        private var mComplicationDataCenterFirstLine: ComplicationData? = null
+        private var mComplicationDataCenterSecondLine: ComplicationData? = null
+        private var mComplicationDataBorderCircle: ComplicationData? = null
+
 
 
         private var mOuterRingWidth = 0F
@@ -197,6 +203,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
             setWatchFaceStyle(WatchFaceStyle.Builder(this@RotateWatchFace)
                     .setAcceptsTapEvents(true)
+                    .setStatusBarGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
                     .build())
 
             mCalendar = Calendar.getInstance()
@@ -221,20 +228,27 @@ class RotateWatchFace : CanvasWatchFaceService() {
             }
 
             setDefaultSystemComplicationProvider(
-                    CENTER_COMPLICATION,
-                    SystemProviders.DAY_AND_DATE,
+                    COMPLICATION_CENTER_FIRST_LINE,
+                    SystemProviders.DAY_OF_WEEK,
                     ComplicationData.TYPE_SHORT_TEXT
             )
 
             setDefaultSystemComplicationProvider(
-                    PADDING_CICLE_COMPLICATION,
+                    COMPLICATION_CENTER_SECOND_LINE,
+                    SystemProviders.DATE,
+                    ComplicationData.TYPE_SHORT_TEXT
+            )
+
+            setDefaultSystemComplicationProvider(
+                    COMPLICATION_BORDER_CIRCLE,
                     SystemProviders.WATCH_BATTERY,
                     ComplicationData.TYPE_RANGED_VALUE
             )
 
             setActiveComplications(
-                    CENTER_COMPLICATION,
-                    PADDING_CICLE_COMPLICATION
+                    COMPLICATION_CENTER_FIRST_LINE,
+                    COMPLICATION_CENTER_SECOND_LINE,
+                    COMPLICATION_BORDER_CIRCLE
             )
         }
 
@@ -292,14 +306,13 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
         override fun onComplicationDataUpdate(watchFaceComplicationId: Int, data: ComplicationData?) {
             super.onComplicationDataUpdate(watchFaceComplicationId, data)
-            Toast.makeText(applicationContext, "onComplicationDataUpdate", Toast.LENGTH_SHORT)
-                    .show()
             if (data != null) {
-                if (watchFaceComplicationId == CENTER_COMPLICATION) {
-                    mComplicationDataCenter = data
-                }
-                else if (watchFaceComplicationId == PADDING_CICLE_COMPLICATION) {
-                    mComplicationDataPadding = data
+                if (watchFaceComplicationId == COMPLICATION_CENTER_FIRST_LINE) {
+                    mComplicationDataCenterFirstLine = data
+                } else if (watchFaceComplicationId == COMPLICATION_CENTER_SECOND_LINE) {
+                    mComplicationDataCenterSecondLine = data
+                } else if (watchFaceComplicationId == COMPLICATION_BORDER_CIRCLE) {
+                    mComplicationDataBorderCircle = data
                 }
             }
 
@@ -326,7 +339,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
             drawPaddingRing(
                     canvas,
-                    (mComplicationDataPadding?.value ?: 0F) - ((mComplicationDataPadding?.minValue ?: 0F)) / (mComplicationDataPadding?.maxValue ?: 1F)
+                    (mComplicationDataBorderCircle?.value ?: 0F) - ((mComplicationDataBorderCircle?.minValue ?: 0F)) / (mComplicationDataBorderCircle?.maxValue ?: 1F)
             )
 
             drawNumbers(canvas, hour, minuteFloat)
@@ -335,10 +348,25 @@ class RotateWatchFace : CanvasWatchFaceService() {
             drawHour(canvas, hour, mOuterRingHighlightTextPaint)
             drawMinute(canvas, minute, mInnerRingHighlightTextPaint)
 
-            val centerText = mComplicationDataCenter?.shortText?.getText(applicationContext, now)?.toString() ?:
-                mComplicationDataCenter?.longText?.getText(applicationContext, now)?.toString() ?: ""
-            mCenterTextPaint.getTextBounds(centerText, 0, centerText.length, mTextBounds);
-            canvas.drawText(centerText, mSurfaceCenter, mSurfaceCenter - mTextBounds.exactCenterY(), mCenterTextPaint)
+            val firstLine = mComplicationDataCenterFirstLine?.shortText?.getText(applicationContext, now)?.toString() ?:
+                mComplicationDataCenterFirstLine?.longText?.getText(applicationContext, now)?.toString() ?: ""
+            val secondLine = mComplicationDataCenterSecondLine?.shortText?.getText(applicationContext, now)?.toString() ?:
+            mComplicationDataCenterSecondLine?.longText?.getText(applicationContext, now)?.toString() ?: ""
+
+            mCenterTextPaint.getTextBounds(firstLine, 0, firstLine.length, mTextBounds)
+            canvas.drawText(
+                    firstLine,
+                    mSurfaceCenter,
+                    mSurfaceCenter - mSurfaceHeight/24F - mTextBounds.exactCenterY() - mTextBounds.height(),
+                    mCenterTextPaint
+            )
+
+            mCenterTextPaint.getTextBounds(secondLine, 0, secondLine.length, mTextBounds)
+            canvas.drawText(secondLine,
+                    mSurfaceCenter,
+                    mSurfaceCenter + mSurfaceHeight/24F - mTextBounds.exactCenterY() + mTextBounds.height(),
+                    mCenterTextPaint
+            )
 
 
 
