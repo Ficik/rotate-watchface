@@ -392,7 +392,7 @@ class RotateWatchFace : CanvasWatchFaceService() {
                         0F,
                         mSurfaceWidth,
                         mSurfaceWidth,
-                        165F, 30F,
+                        255F, 30F,
                         false,
                         Paint().apply {
                             color = mHighlightColor
@@ -485,8 +485,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
             paint.getTextBounds(hours, 0, hours.length, mTextBounds)
             canvas.drawText(
                     hours,
-                    mPaddingRingWidth + mOuterRingWidth/2,
-                    mSurfaceCenter - mTextBounds.exactCenterY(),
+                    mSurfaceCenter,
+                    mPaddingRingWidth + mOuterRingWidth/2 - mTextBounds.exactCenterY(),
                     paint
             )
         }
@@ -497,8 +497,8 @@ class RotateWatchFace : CanvasWatchFaceService() {
 
             canvas.drawText(
                     minutes,
-                    mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth/2,
-                    mSurfaceCenter - mTextBounds.exactCenterY(),
+                    mSurfaceCenter,
+                    mPaddingRingWidth + mOuterRingWidth + mInnerRingWidth/2 - mTextBounds.exactCenterY(),
                     paint
             )
         }
